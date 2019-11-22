@@ -1,0 +1,88 @@
+DEBUT
+INTERFACE
+COMP FenA : Fenetre
+PROP 
+Position : {Haut,Bas,Middle} ;
+Visible : bool ;
+Actif : bool ;
+
+
+EVT
+
+Click {if Visible = False then Visible := True}
+Drag {if Visible = True then Actif := True}
+
+
+COMP MenuSide : Menu (FenA)
+PROP 
+Actif, Visible : bool;
+INV 
+Visible = True
+EVT
+Click {if Visible = True  then Actif := False}
+
+COMP Cellule : Bouton (MenuSide)
+PROP
+Option : int ;
+Deployer : bool ;
+EVT
+Click (Item) {if Deployer = True  then Option := Option + 1}
+EnterPress (Item) {if Deployer = True  then Option := Option - 2}
+
+COMP Plan : Panel (FenP)
+PROP
+NbreObjet : int ;
+ListObjet : {Aucun,Cercle,Point,Segment,Rectangle} ;
+Actif : bool ;
+EVT
+Click  {if 	Actif = True  then NbreObjet := NbreObjet + 1 ; ListObjet := ListObjet + ' point '}
+Drag   {if  Actif = True  then NbreObjet := NbreObjet + 1 ; ListObjet := ListObjet + ' segment '}
+
+
+
+INITIALISATIONS
+FenA::Position:=Haut;
+FenA::Visible:=True;
+
+Commande::Option:=Projection;
+Commande::Deployer:= True;
+MenuH::ItemChoisi := Fichier;
+MenuH::Visible :=True;
+MenuH::Actif :=False;
+Plan::NbreObjet := 0;
+Plan::ListObjet := Aucun;
+Plan:: Actif := True;
+ACTIONS
+{
+	Click(FenA) ;
+	Drag (Plan) ;
+	Click (Plan)
+}	;
+{
+	{
+		DbClick(Plan) ;
+		{
+			Click (BtProjection) +
+			EnterPress (Cellule) ~
+			{
+				Click (Commande);
+				Click (Projection)
+			}
+		}
+	}
+} +
+{ 
+	DbClick(Plan);
+	DbClick(Plan);
+	{
+		Click (BtDistance) ~
+		{
+				Click (Commande);
+				Click (Distance)
+		} ;
+		EnterPress (Cellule)
+	}
+}
+
+
+FIN

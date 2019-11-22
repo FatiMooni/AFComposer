@@ -1,0 +1,85 @@
+DEBUT
+INTERFACE
+COMP FenP : Fenetre
+PROP 
+Position : {Agrd,Red,Ferm} ;
+Visible : bool ;
+Xpos,Ypos : int ;
+EVT
+ClickBtFerm {if Position <> Ferm then Position:= Ferm}
+ClickBtAgrd {if Position = Agrd then Position:= Red }
+ClickBtRed {if Position = Red then Position:= Agrd }
+Click {if Visible = False then Visible := True}
+
+COMP MenuH : Menu (FenP)
+PROP 
+ItemChoisi : {Fichier,Commande,Information} ;
+Actif, Visible : bool;
+INV 
+Visible = True
+EVT
+Click (Item) {if Actif = True  then ItemChoisi:= item and Item.Deployer := True}
+
+COMP Commande : Menu (MenuH)
+PROP
+Option : {Projection,Distance} ;
+Deployer : bool ;
+EVT
+Click (Item) {if Deployer = True  then Option := True}
+EnterPress (Item) {if Deployer = True  then Option := True}
+
+COMP Plan : Caneva (FenP)
+PROP
+NbreObjet : int ;
+ListObjet : {Aucun,Cercle,Point,Segment,Rectangle} ;
+Actif : bool ;
+EVT
+Click  {if 	Actif = True  then NbreObjet := NbreObjet + 1 ; ListObjet := ListObjet + ' point '}
+Drag   {if  Actif = True  then NbreObjet := NbreObjet + 1 ; ListObjet := ListObjet + ' segment '}
+
+
+
+INITIALISATIONS
+FenP::Position:=Agrd;
+FenP::Visible:=True;
+FenP::Xpos:=10;
+FenP::Xpos:=11;
+Commande::Option:=Projection;
+Commande::Deployer:= True;
+MenuH::ItemChoisi := Fichier;
+MenuH::Visible :=True;
+MenuH::Actif :=False;
+Plan::NbreObjet := 0;
+Plan::ListObjet := Aucun;
+Plan:: Actif := True;
+ACTIONS
+{
+	Click(Plan) ;
+	Drag (Plan)
+}	;
+{
+	{
+		DbClick(Plan) ;
+		{
+			Click (BtProjection) ~
+			{
+				Click (Commande);
+				Click (Projection)
+			}
+		}
+	}
+} +
+{ 
+	DbClick(Plan);
+	DbClick(Plan);
+	{
+		Click (BtDistance) ~
+		{
+				Click (Commande);
+				Click (Distance)
+		}
+	}
+}
+
+
+FIN

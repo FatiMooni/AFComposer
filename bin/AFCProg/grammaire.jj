@@ -1,0 +1,413 @@
+PARSER_BEGIN(gram)
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Iterator;
+import java.util.Set;
+import java.io.*;
+
+public class gram {
+  public static HashMap<String, String>  listVar ;
+  public static HashMap<Integer, String>  listAct;
+  public static int cpt=1;
+  public static int blockNum=1000;
+  public static HashMap <Integer,AEF> Partaef ;
+  public static boolean bl=false;
+  static public File out ;
+  static public FileOutputStream OutStream ;
+  static public BufferedWriter buf ;
+  static public StringBuffer GUIBuffer;
+  static public ArrayList<String> vectAction;
+
+  static void addVar ( String var , String type )
+  { 
+      listVar.put(var, type);
+
+  }
+  //
+  static void addAct ( int indice , String action )
+  { 
+       listAct.put(indice, action);
+
+  }
+  //
+ public static void Rebuild(ArrayList<String> vect,String pt,int db ,int fn ){
+        int cpt=0;
+        boolean continu = true ;
+        vect.add(db,pt);
+        while ( continu ) {
+        vect.remove(db+1);
+        cpt ++ ;
+        if (cpt==fn-db+1) continu= false ;
+        
+    }
+ }
+ //
+public static int ConnectTables(String block){
+  int i ;
+       AEF temp1 = new AEF(0);
+       AEF temp2 = new AEF(0);
+                System.out.println(block);
+
+       AEFCreator op = new AEFCreator();
+
+       String toks[] = block.split("((?<=;)|(?=;)|(?=[+])|(?<=[+])|(?<=~)|(?=~)|(?<=[}])|(?=[}])|(?<=[{])|(?=[{]))") ;
+       /** to get the first block **/
+       if( Integer.parseInt(toks[1]) < 1000) 
+               //// basic table --> we need to generate a new one
+                 temp1 = temp1.GenerateBasic(Integer.parseInt(toks[1]));
+           else 
+               /// Get the Transation table from the hashmap
+             temp1 = Partaef.get(Integer.parseInt(toks[1]));
+                 
+       /** the left side of block **/
+       for( i=3 ;i< toks.length-1 ; i=i+2 ) 
+       { 
+         
+         if( Integer.parseInt(toks[i]) < 1000)
+                 //// basic table --> we need to generate a new one
+         { temp2 = temp2.GenerateBasic(Integer.parseInt(toks[i]));
+         
+         }
+         
+             else 
+                 /// Get the Transation table from the hashmap
+               
+               temp2 = Partaef.get(Integer.parseInt(toks[i]));
+         
+         
+         // operations
+         System.out.println("the operation "+toks[i-1]);
+         
+         
+         switch(toks[i-1]) {
+         case "+":  temp1 = op.alternative(temp1, temp2); break ;
+         case "~": temp1 = op.choice(temp1, temp2); break ;
+         case ";": temp1 = op.sequence(temp1, temp2); break ;
+         }
+         
+       }
+       //test 
+       for (int l=0;l<temp1.nbState;l++){
+
+          for (int k=0;k<temp1.nbState;k++){
+            System.out.print("  "+temp1.matrice [l][k]+"   ");
+          }
+          System.out.println();
+
+        }
+       /** add the partial transition table **/
+         Partaef.put(blockNum, temp1);
+         blockNum++ ;
+        
+      
+      return blockNum-1 ;
+}
+public static int actionRestantees()
+{
+  int n=0;
+  for(int jj=0;jj<vectAction.size();jj++) 
+    if ( !(vectAction.get(jj).equals("{")) && !(vectAction.get(jj).equals("}")) && !(vectAction.get(jj).equals("+")) 
+    && !(vectAction.get(jj).equals(";")) && !(vectAction.get(jj).equals("~")) ) 
+      n++;
+  return n;
+}
+//
+public static void global()
+{
+  int nbAction=0;
+  //////////////initilalisation
+    vectAction.add(0,"{");
+    vectAction.add(vectAction.size(),"}");
+    nbAction=actionRestantees();
+  
+boolean bool=false,continue2=true;
+int taille=vectAction.size(),i=0,cpt=0,indicedbt=0;
+StringBuilder temp=new StringBuilder();
+//System.out.println("taille "+taille);
+while (nbAction!=1)
+{
+  while (i<taille)
+  {
+    if(vectAction.get(i).equals("{"))
+    {
+      if(! (vectAction.get(i+1).equals("{") ) )
+      {
+        cpt=i+3;
+        indicedbt=i;
+        temp.append("{"+vectAction.get(i+1));
+        if( vectAction.get(i+2).equals("+") || vectAction.get(i+2).equals(";")  || vectAction.get(i+2).equals("~") )
+        {
+          temp.append(vectAction.get(i+2));
+        }
+        else if(vectAction.get(i+2).equals("}"))
+        {
+          temp.append("}");
+          continue2=false;
+          Rebuild(vectAction,Integer.toString(ConnectTables(temp.toString())),indicedbt,i+2 );
+          taille=vectAction.size();
+          bool=true;
+        }
+        while(continue2)
+        {
+          if(vectAction.get(cpt).equals("{"))
+          {
+            continue2=false;
+          }
+          else
+          {
+            temp.append(vectAction.get(cpt));cpt++;
+            if(vectAction.get(cpt-1).equals("}"))
+            {
+             
+             Rebuild(vectAction,Integer.toString(ConnectTables(temp.toString())),indicedbt,cpt-1 );nbAction=actionRestantees();
+              continue2=false;bool=true;
+              taille=vectAction.size();
+            }
+          }
+        }
+        continue2=true;
+        temp.setLength(0); i=(bool)? i+1 : cpt -1; bool=false;
+      }
+      //
+    } 
+    i++;
+  }
+  i=0;
+}
+
+
+}
+  public static void AFComposer(File file) throws ParseException {
+     listVar = new HashMap<String, String>();
+     listAct= new HashMap<Integer, String>();
+     Partaef = new HashMap <Integer,AEF>();
+     GUIBuffer = new StringBuffer(" ||    Component    ||     Type     ||     Holder     ||     Proprities    || ");
+     vectAction=new ArrayList<String>();
+
+       try
+      {
+        out = new File("Composant_"+file.getName()+".gui");
+        OutStream = new FileOutputStream(out);
+        buf = new BufferedWriter(new OutputStreamWriter(OutStream));
+        gram parser = new gram(new InputStreamReader(new FileInputStream(file)));
+         parser.prog();
+      }
+      catch (IOException e) {
+      e.printStackTrace();
+    }
+    
+           
+        // appel de la fonction globale
+         global();
+         AEF finalAEF = new AEF (0) ;
+         finalAEF =  Partaef.get(blockNum-1);
+         SaveFiles save= new SaveFiles() ;
+         try
+         {   
+         save.CreateAEFile(finalAEF,"AEFTable_"+file.getName());
+         save.CreateActionsFile( listAct,"Actions_"+file.getName());
+         }
+         catch (Exception e) {
+         e.printStackTrace();
+       }
+  }
+}
+
+PARSER_END(gram)
+
+/* CHARCTERS THAT SHOULD BE IGNORED */
+SKIP : {
+<" " | "\t" | "\n" | "\r">
+}
+
+
+TOKEN :
+{ /* RESERVED WORDS AND LITERALS */
+  < BEGIN: "DEBUT" >
+| < END: "FIN" >
+| < INIT: "INITIALISATIONS" >
+| < INTERFACE : "INTERFACE" >
+| < ACT : "ACTIONS" >
+| < COMPONENT : "COMP" >
+| < PROPERTY : "PROP" >
+| < EVENT : "EVT">
+| < INV : "INV">
+| < IF : "if">
+| < THEN : "then">
+|<AND:"and"> 
+|<OR:"or">
+|<TRUE:"True" | "TRUE" | "true">
+|<FALSE:"False" | "FALSE"| "false"> 
+
+
+/* OPERATIONS */
+| < ALTERNATIVE : "+">
+| < SEQUENCE : ";">
+| < CHOICE : "~">
+| < AFFECTATION : ":=">
+| < DOUBLETWOPOINTS : "::">
+|<EQUAL: "="> 
+|<OPENPAR: "("> 
+|<CLOSEPAR: ")"> 
+|<OPENACO: "{"> 
+|<CLOSEACO: "}"> 
+|<TWOPOINTS : ":"> 
+|<COMMA : ","> 
+|<COTE: "'">
+|<DIFF: "<>">
+  
+
+/* OTHER SYMBOLS */
+
+/* ACTIONS ON THE INTERFACE ELEMENTS */
+
+
+| < COMPACTION : "Click"
+          | "DbClick"
+          | "Drag"
+          | "ClickBtRed"
+          | "ClickBtFerm"
+          | "ClickBtAgrd"
+          | "ClickTitre"
+          | "EnterPress"
+          | "CharKeyPress" 
+          | "EnterKeyPress" 
+          | "Drop" >
+
+/* COMPENONTS */
+| < COMPNAMES : "Menu"
+          | "Bouton"
+          | "Fenetre" 
+        | "Boite Dialogue" 
+        | "Panel"
+        | "Champs Text"
+        | "Combo Box"
+        | "Liste Deroulante"
+        | "Case a cochet"
+        | "Bouton Radio" 
+        | "Icône"
+        | "Caneva"
+        | "Item" > 
+
+/* PROPERTIES */
+
+| < COMPROP : "Position" 
+         | "Visible"
+         | "Xpos"
+         | "Ypos"
+         | "Actif"
+         | "Option"
+         | "ItemChoisi"
+         | "Deployer"
+         | "NbreObjet"
+         | "ListObjet"
+         | "Etat" >
+
+/* IDs and others */
+   |<TYPE: <INTEGER>| <BOOLEAN> | <OPENACO> ((<ID>|<ENUM>)(<COMMA> (<ID>|<ENUM>) )*) <CLOSEACO> > 
+   |<ENUM : "Ferm" | "Agrd" | "Red">
+   |<ALPHANUM: ((["a"-"z"] | ["A"-"Z"])+ (["0"-"9"])+(["a"-"z"] | ["A"-"Z"])+ )+> 
+   |<ALPHA: ["a"-"z"] (["a"-"z"] | ["A"-"Z"])+ >
+   |<ID: ["A"-"Z"](["a"-"z"] | ["A"-"Z"])*> 
+   |<VALUE: (["0"-"9"])+>
+   
+   |<BOOLEAN : "bool" | "Bool">
+|<INTEGER : "Integer" | "int">
+}
+
+
+void prog (): {} { 
+ <BEGIN> <INTERFACE> IHM_declaration() <END><EOF>
+}
+
+void IHM_declaration(): 
+{Token temp;}
+{
+  <COMPONENT> temp = <ID> {GUIBuffer.append("\r +-----------------------------------------------------------------------+\n");
+                           GUIBuffer.append(" |    "+temp.toString()+"     \t||  ");}
+  ":" temp = <COMPNAMES>  {GUIBuffer.append(temp.toString()+"    \t||  "); }
+  ("(" temp=<ID> {GUIBuffer.append(temp.toString()+"     \t||  "); }")")? 
+  <PROPERTY> Prop() IHM_declaration() | Init()
+}
+
+void Prop() : 
+{
+  Token t;
+  Token v ;
+  Token w ;
+  
+} 
+{ 
+  (t=<COMPROP>(<COMMA><COMPROP>)*{GUIBuffer.append(t.toString()+" \t\n\t\t\t\t\t\t\t\t\t\t"); }
+   ":" v=<TYPE> ";" )+
+  (<INV> (<COMPROP> <EQUAL> (<TYPE> | <TRUE> | <FALSE> ))* )?
+  <EVENT> 
+  (w=<COMPACTION> (<OPENPAR><COMPNAMES><CLOSEPAR>)?  condition())+
+  {addVar(v.image,t.image);} 
+}
+
+void condition() : 
+{} 
+{
+<OPENACO> <IF> <COMPROP> (<EQUAL> | <DIFF>) (<ENUM> | <VALUE> | <ALPHANUM> | <TRUE> |<FALSE>)
+<THEN> (operation() (";" | <AND>)?)+ <CLOSEACO>
+}
+
+void operation() : 
+{} 
+{
+  (<COMPROP>|<COMPNAMES>"."<COMPROP> ) <AFFECTATION> (<ALPHA> |<ALPHANUM> | <VALUE>| <TRUE> |<FALSE> | <ENUM> |
+  (<COMPROP>|<COMPNAMES>"."<COMPROP> ) ("+" | "-") ( (<COTE>)? (<ALPHA> |<ALPHANUM> | <VALUE> | <ID>) (<COTE>)?)) 
+
+  
+}
+
+
+void Init():
+{}
+{
+  try {
+  <INIT> {   
+  buf.write(GUIBuffer.toString());buf.close(); } Init_blocks()
+    }catch (IOException e) {
+      e.printStackTrace();
+    }
+}
+
+void Init_blocks() :
+{}
+{
+<ID> <DOUBLETWOPOINTS> <COMPROP> <AFFECTATION> 
+( <ALPHANUM> |<VALUE>| <TRUE> |<FALSE> | <ENUM> | <ID>) ";" Init_blocks() | Action_Declaration()
+}
+
+void Action_Declaration():
+{}
+{
+ <ACT> action_elim() Add_block()
+}
+
+
+void  action_elim() :
+{
+  Token act,id;
+}
+{
+act=<COMPACTION> <OPENPAR> id=<ID>{vectAction.add(Integer.toString(cpt));addAct(cpt,act.image+"("+id.image+")");cpt++;} <CLOSEPAR> Add_block()
+| <OPENACO>{vectAction.add("{");}  action_elim()  <CLOSEACO>{vectAction.add("}");} Add_block()
+}
+ 
+
+void Add_block() :
+{
+  Token op;
+}
+{
+  op=<SEQUENCE>{vectAction.add(op.image);} action_elim() 
+| op=<CHOICE>{vectAction.add(op.image);} action_elim()
+| op=<ALTERNATIVE>{vectAction.add(op.image);} action_elim()
+| {}
+} 
+
+

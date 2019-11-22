@@ -1,0 +1,15 @@
+ ||    Component    ||     Type     ||     Holder     ||     Proprities    ||  +-----------------------------------------------------------------------+
+ |    FenP     	||  Fenetre    	||  Position 	
+										Visible 	
+										Xpos 	
+										 +-----------------------------------------------------------------------+
+ |    MenuH     	||  Menu    	||  FenP     	||  ItemChoisi 	
+										Actif 	
+										 +-----------------------------------------------------------------------+
+ |    Commande     	||  Menu    	||  MenuH     	||  Option 	
+										Deployer 	
+										 +-----------------------------------------------------------------------+
+ |    Plan     	||  Caneva    	||  FenP     	||  NbreObjet 	
+										ListObjet 	
+										Actif 	
+										
